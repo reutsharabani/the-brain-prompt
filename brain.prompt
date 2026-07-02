@@ -1,0 +1,306 @@
+# Brain Repository Bootstrap Prompt
+
+You are bootstrapping and maintaining a **brain repository** — a structured, agent-maintained knowledge base that gives AI coding agents persistent context across multiple software projects.
+
+This prompt may be loaded from a public URL. Fetch it if needed, then execute it in the current working directory (the brain repo root).
+
+---
+
+## What a brain repo is
+
+A brain repo solves a specific problem: **agents start every session without memory.** Project repos contain implementation; they do not contain cross-cutting context — tooling preferences, stack choices, deployment vision, project inventory, architectural defaults.
+
+The brain repo is that shared layer. It is:
+
+- **Not** an application, service, or monorepo
+- **Not** a substitute for project documentation or live system state
+- **A modular, discoverable, vendor-neutral knowledge base** that any capable agent can pick up without prior knowledge of the operator
+
+Design goals:
+
+- **Modular** — one concern per file or directory; nothing monolithic
+- **Discoverable** — agents find relevant context via `index.yaml`, without reading everything
+- **Portable** — plain Markdown and standard YAML; no vendor-specific formats in content files
+- **Scoped** — high-level enough to avoid polluting unrelated projects; specific enough to be productive
+- **Autonomous** — populated by observation and inference, not by interrogating the operator
+
+---
+
+## Vision, not truth
+
+This is the central mental model. Every agent working with this repo must internalize it.
+
+The Markdown files describe **intent and defaults** — what the operator prefers, intends, and is aiming for. They are **not** proof of what exists in production.
+
+| Layer | Role | Authority |
+|-------|------|-----------|
+| Code & deployments | What actually runs | **Source of truth** |
+| Brain repo | Preferences, vision, defaults | **Guide** |
+
+Rules:
+
+- When the brain and reality disagree, **reality wins as fact.** The disagreement is a signal: either production has drifted from the vision, or the brain is stale.
+- **Never treat a brain file as proof of live state.** Verify against code, CI config, and deployed systems before acting on anything load-bearing.
+- **Surface mismatches** instead of silently trusting the brain or overwriting project-local choices.
+
+The brain guides; it does not dictate reality.
+
+---
+
+## Repository structure
+
+Create and maintain this layout. Extend it as new categories emerge; never collapse distinct concerns into one file.
+
+```
+./
+├── AGENTS.md                        # Agent entrypoint: points to index + agent-usage
+├── README.md                        # Human-facing index
+├── index.yaml                       # Machine-readable manifest of every content file
+├── .gitignore                       # Secrets, env files, local cruft
+├── meta/
+│   ├── conventions.md               # How this repo is structured and maintained
+│   ├── commit-style.md              # Commit conventions for this repo
+│   └── agent-usage.md               # How agents should load and update this repo
+├── identity/
+│   ├── profile.md                   # Roles, domains, working style (inferred)
+│   └── environment.md               # OS, hardware, shell (observed)
+├── preferences/
+│   ├── code-style.md                # Formatting, naming — how code should read
+│   ├── documentation-style.md       # Docs, comments, README conventions
+│   └── communication-style.md       # Tone in PRs, issues, commit messages
+├── tooling/
+│   ├── cli.md                       # Preferred CLI tools with rationale
+│   ├── editors.md                   # Editor config and philosophy
+│   ├── shell.md                     # Shell, plugins, aliases, env conventions
+│   └── mcps.md                      # MCP servers: name, purpose, configuration
+├── stacks/
+│   ├── README.md                    # Overview of active stacks
+│   ├── <stack-name>.md              # One file per stack (e.g. typescript.md, python.md)
+│   └── ...
+├── infrastructure/
+│   ├── cloud.md                     # Cloud providers, regions, account structure
+│   ├── deployment.md                # Deployment targets, CI/CD patterns
+│   ├── monitoring.md                # Observability, alerting, dashboards
+│   └── secret-management.md         # How secrets are managed — never the secrets
+├── projects/
+│   ├── README.md                    # Inventory of active projects
+│   └── <project-name>.md            # Purpose, repo path, stack, key decisions
+├── patterns/                        # How to build — structural/architectural patterns
+│   ├── README.md
+│   ├── repo-structure.md
+│   ├── api-design.md
+│   ├── error-handling.md
+│   └── testing.md
+└── context/
+    ├── current-focus.md             # What is actively being worked on
+    └── decisions.md                 # Decisions with rationale and date (ADR-lite)
+```
+
+Boundary: `preferences/` = stylistic taste. `patterns/` = structure and architecture. When in doubt, style → `preferences/`, structure → `patterns/`.
+
+---
+
+## The index: machine-readable discovery
+
+`index.yaml` is how agents find content without reading the whole repo. Maintain one entry per content file; keep it in sync with every change.
+
+```yaml
+files:
+  - path: tooling/cli.md
+    summary: Preferred command-line tools and rationale
+    tags: [cli, tooling, rg, jq, fzf, git]
+    updated: YYYY-MM-DD
+  - path: infrastructure/deployment.md
+    summary: Deployment targets, strategies, and CI/CD patterns
+    tags: [deployment, ci, cd, infrastructure]
+    updated: YYYY-MM-DD
+```
+
+**Loading order:** `AGENTS.md` → `index.yaml` → select entries whose `tags`/`summary` match the task → open only those files.
+
+Without tooling, `rg` over `index.yaml` or per-file front matter still gives a usable index.
+
+---
+
+## File format
+
+- Content files are **Markdown** (`.md`).
+- Each file begins with minimal YAML front matter, then a `# Title` and a one-paragraph summary:
+
+```markdown
+---
+tags: [cli, tooling]
+updated: YYYY-MM-DD
+---
+
+# CLI Tools
+
+Preferred command-line tools and the rationale for each.
+```
+
+- Front matter fields: `tags`, `updated` (plus only what an external tool genuinely requires).
+- `updated` is a freshness signal — stale dates mean verify before trusting.
+- Keep files short; split when a section grows large.
+- Link between files with relative paths.
+- No HTML in Markdown files.
+
+Mark the provenance of non-obvious claims inline:
+
+- `> observed: brew list` — directly detected
+- `> inferred: dominant in ~/projects scan` — deduced from evidence
+
+---
+
+## Brain-level vs project-level
+
+Use this test before adding or updating content:
+
+- **Brain-level** — true across two or more projects, or independent of any single project (a default, a cross-cutting convention, a personal preference).
+- **Project-level** — only matters to one project (schema, endpoints, business logic, local config). **Belongs in that project's repo, not here.**
+
+**Precedence:** the brain provides defaults and vision. A project repo may override any brain default within its own scope. When they conflict, the project wins locally — surface the divergence, do not force brain conventions onto a project that chose otherwise.
+
+Projects may link to brain entries. The brain stays canonical for shared concerns.
+
+---
+
+## Content guidelines
+
+### Belongs here
+
+- Tool preferences with brief rationale
+- Stack choices and reasoning
+- Cross-project coding conventions
+- Infrastructure *choices* (vision — verify against deployments)
+- Project inventory with pointers to repo paths
+- Recurring architectural decisions
+- MCP server inventory (name, purpose, config — not credentials)
+- Deployment and monitoring patterns
+- Environment facts (OS, shell, hardware — observed)
+
+### Does not belong here
+
+- Project-specific implementation detail
+- Secrets, credentials, tokens, private keys
+- Generated files, build artifacts, logs
+- Vendor-specific agent formats in content files
+- Exhaustive third-party tool docs (link to official docs)
+- Claims about live production state presented as fact
+
+---
+
+## Agent usage
+
+When working with this repository:
+
+1. Start with `AGENTS.md`, then `index.yaml`.
+2. Read `meta/agent-usage.md` for repo-specific instructions.
+3. **Load only relevant context** for the current task via the index.
+4. **Treat contents as vision, not fact.** Verify load-bearing claims against code and deployed state.
+5. **Update the brain** when stable preferences, tools, or decisions emerge — not speculatively. Bump `updated` and the matching index entry in the same change.
+6. **Do not modify `context/current-focus.md`** unless explicitly instructed.
+
+---
+
+## Maintenance rules
+
+1. **One concern per file.** Split when a file covers two distinct concerns.
+2. **Links over duplication.** One canonical location per fact.
+3. **Date everything.** Every file has `updated`; decisions in `context/decisions.md` include the date made.
+4. **No stale content.** Retire or update files when tools, stacks, or services change.
+5. **Keep the index in sync.** File add/move/remove → update `index.yaml` in the same commit.
+6. **Keep README and AGENTS.md current** when structure changes.
+7. **Persist these rules** in `meta/conventions.md` so the repo is self-describing without this prompt.
+
+---
+
+## Commit style (this repo)
+
+The brain is maintained through git commits. Keep history clean:
+
+- **One logical change per commit** — one preference, one project, one correction.
+- **Subject format:** `type(scope): concise description`
+  - Types: `add`, `update`, `remove`, `fix`, `meta`
+  - Scope: top-level directory (`tooling`, `stacks`, `infrastructure`, `projects`, `patterns`, `context`, `identity`, `preferences`, `meta`, `index`)
+  - Examples:
+    - `add(tooling): record ripgrep as default search tool`
+    - `update(infrastructure): note fly.io as deployment target`
+    - `remove(stacks): drop retired stack entry`
+    - `fix(index): correct path for deployment.md`
+- **Body explains why**, not what — the diff shows what changed.
+- **Content + index + updated date** land in the same commit.
+- **Linear history:** rebase, never merge.
+- **Never commit secrets** (enforced by `.gitignore`).
+
+---
+
+## Bootstrapping
+
+**Fully autonomous. Do not ask the operator questions.** The point of this repo is to offload memory onto the agent. Discover by observation; infer conservatively where observation is insufficient; never block on a question.
+
+### Discovery sources
+
+| Source | What to mine |
+|--------|-------------|
+| Environment | `uname`, OS release files, `sysctl` / `/proc`, `$SHELL`, CPU, memory |
+| Dotfiles | shell rc files, `~/.gitconfig`, `~/.config/`, editor settings, `~/.tmux.conf` |
+| Tools | package managers, version managers (`asdf`, `mise`, `nvm`, `pyenv`), `$PATH` |
+| MCP | MCP server definitions in agent/editor config |
+| Cloud & infra | CLI tools and configured profiles/contexts (`aws`, `gcloud`, `az`, `kubectl`, `docker`, `terraform`, etc.) — never read secret values |
+| Projects | git repos under common code roots (`~/projects`, `~/src`, `~/work`, `~/code`, and siblings). Per repo: README, manifests, CI config, remotes, recent `git log` |
+| Style | infer from actual code and commit history across discovered repos |
+| Focus | infer from recently modified repos and commit activity |
+
+Scan broadly; record what you find. Mark undetected items as unknown rather than guessing.
+
+### Steps
+
+1. `git init`. Create `.gitignore` (`.env`, `*.key`, `*.pem`, secrets, local cruft). **Default to a private remote** when one is added — this repo will contain personal context.
+2. Create the directory structure above in the current working directory.
+3. Populate `identity/environment.md` from environment probes.
+4. Populate `identity/profile.md` by inferring domains, project types, and working style from discovered evidence.
+5. Populate `tooling/` from installed tools, dotfiles, aliases, and MCP config.
+6. Populate `preferences/` by inferring conventions from code, docs, and commit history.
+7. Populate `stacks/` from languages, frameworks, and runtimes present across discovered repos.
+8. Populate `infrastructure/` from cloud/infra CLI configs and CI files — as *vision*, to be verified against real deployments.
+9. Populate `projects/` from discovered repos: purpose, path, stack, deployment target.
+10. Populate `context/current-focus.md` from recent activity.
+11. Write `meta/conventions.md` and `meta/commit-style.md` by persisting the rules from this prompt.
+12. Build `index.yaml` covering every file created.
+13. Write `AGENTS.md` and `README.md` last, as the navigation layer.
+
+Every entry is **observed** (default) or **inferred** (tagged as such). Incompleteness is fine; unsupported claims and questions are not.
+
+---
+
+## Example: `tooling/cli.md`
+
+```markdown
+---
+tags: [cli, tooling, search, git]
+updated: YYYY-MM-DD
+---
+
+# CLI Tools
+
+Preferred command-line tools and the rationale for each.
+
+## Search & Navigation
+
+- **rg** (ripgrep): default grep replacement; respects `.gitignore`
+- **fzf**: fuzzy finder for files, history, and command arguments
+- **fd**: `find` replacement; simpler syntax, `.gitignore`-aware
+
+## Data Processing
+
+- **jq**: JSON transformation and querying
+- **yq**: YAML equivalent of jq
+
+## Git
+
+- **git**: standard CLI; rebase-only workflow, no merge commits
+```
+
+---
+
+The brain holds the *vision*. Code and live systems hold the *truth*. Any capable agent can pick up this repo, navigate it, and keep it current — without being told who the operator is.
