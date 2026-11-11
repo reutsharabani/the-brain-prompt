@@ -36,6 +36,32 @@ Brain-level facts apply across two or more projects (or are independent of any s
 
 The agent builds the brain by observing your machine — dotfiles, installed tools, MCP config, cloud CLI profiles, and existing git repos. It infers what it cannot observe directly and marks uncertain entries accordingly. No questionnaire.
 
+## Work from the brain, not the project
+
+Start agent sessions in the brain repo itself, not inside an individual project's context. From the brain the agent sees every project, host, and service at once, so it can consolidate, dedupe, and remove across all of them. Opened inside one project, it sees only that project's slice and will optimize locally while a duplicate service keeps running elsewhere. Projects and services become implementation details the brain reasons over: decide what should exist here, then change the repos that implement it.
+
+```text
+~/brain $ agent
+> something here is slow and expensive, optimize it
+
+agent: I have a full view of your projects and hosts.
+       chat-api and live-rooms each run their own TURN relay
+       (turn-a on edge-1, turn-b on edge-2). Same role, split
+       traffic, both mostly idle, both on the bill.
+
+       Nuke turn-b. Point both projects at turn-a.
+
+       plan
+         live-rooms   drop the local relay; use turn-a
+         edge-2       remove turn-b
+         edge-1       keep turn-a as the shared relay
+       diff
+         - 1 TURN relay
+         ~ same coverage, one less service to run
+```
+
+*This is the leverage of treating services as implementation details.*
+
 ## Quick start
 
 1. Create your brain directory and open an agent session there:
@@ -48,7 +74,7 @@ The agent builds the brain by observing your machine — dotfiles, installed too
 
    > Read https://raw.githubusercontent.com/reutsharabani/the-brain-prompt/main/brain.prompt and follow it to bootstrap this directory as my brain repository. Do not ask me questions — discover everything autonomously as the prompt specifies.
 
-3. For ongoing work, keep starting agent sessions in `~/brain` so maintenance stays in context.
+3. For ongoing work, start agent sessions in `~/brain` — not inside a project — so the agent can see every project, host, and service and decide what to consolidate, dedupe, or remove.
 
 ## Privacy
 
