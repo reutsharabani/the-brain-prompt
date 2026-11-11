@@ -20,29 +20,21 @@ A bootstrap prompt for creating and maintaining a **brain repository** — persi
 
 ## Work from the brain, not the project
 
-From the brain, the agent sees every project, host, and service at once, so it can consolidate, dedupe, and remove across them. Projects and services become implementation details the brain reasons over; a session inside one project sees only that slice.
+Start the agent in the brain repo, not inside one project. It sees every project and host, so it can drop a service two projects are each running on their own.
 
 ```text
 ~/brain $ agent
-> something here is slow and expensive, optimize it
+> our hosting bill went up, can we cut it?
 
 agent: I have a full view of your projects and hosts.
-       chat-api and live-rooms each run their own TURN relay
-       (turn-a on edge-1, turn-b on edge-2). Same role, split
-       traffic, both mostly idle, both on the bill.
-
-       Nuke turn-b. Point both projects at turn-a.
-
-       plan
-         live-rooms   drop the local relay; use turn-a
-         edge-2       remove turn-b
-         edge-1       keep turn-a as the shared relay
-       diff
-         - 1 TURN relay
-         ~ same coverage, one less service to run
+       shop and billing each run their own Redis,
+       one on vps-a and one on vps-b.
+       I'll remove the copy on vps-b and point both
+       projects at the one on vps-a.
+       Opening PRs in both repos.
 ```
 
-*This is the leverage of treating services as implementation details.*
+*The leverage of treating services as implementation details.*
 
 ## The problem
 
